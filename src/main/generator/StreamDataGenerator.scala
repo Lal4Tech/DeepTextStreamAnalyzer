@@ -5,13 +5,13 @@ import kafka.producer.KeyedMessage
 object StreamDataGenerator {
     def main(args: Array[String]) {
         //topic name
-        val topic = "avg"
+        val topic = "text_anlyz"
         //kafka server
         val brokers = "localhost:9092"
         //producer properties
         val props = new Properties()
             props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers)
-            props.put(ProducerConfig.CLIENT_ID_CONFIG, "ScalaProducerExample")
+            props.put(ProducerConfig.CLIENT_ID_CONFIG, "StreamDataGenerator")
             props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,                                             "org.apache.kafka.common.serialization.StringSerializer")
             props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,                                           "org.apache.kafka.common.serialization.StringSerializer")
         val producer = new KafkaProducer[String, String](props)
@@ -26,7 +26,6 @@ object StreamDataGenerator {
                     "text":""" +cols(5)+"""
                   }
                   """
-                println(jsonString)
                 val data = new ProducerRecord[String, String](topic, cols(1), jsonString)
                 producer.send(data)
             }
