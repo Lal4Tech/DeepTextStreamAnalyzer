@@ -14,6 +14,7 @@ import org.apache.spark.storage.StorageLevel
 
 import org.apache.spark.sql.cassandra._
 import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.functions.regexp_replace
 import org.apache.spark.sql.{Row, SparkSession, DataFrame, SQLContext}
 import org.apache.spark.sql.types.{DoubleType, StringType, StructField, StructType}
 
@@ -28,7 +29,7 @@ object MasterApp {
 		val cluster = Cluster.builder().addContactPoint("127.0.0.1").build()
 		val session = cluster.connect()
 		session.execute("CREATE KEYSPACE IF NOT EXISTS textanlyz_space WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };")
-		session.execute("CREATE TABLE IF NOT EXISTS textanlyz_space.txt_anlyz_stats (id text PRIMARY KEY, date text, text_data text, sentiment text)")
+		session.execute("CREATE TABLE IF NOT EXISTS textanlyz_space.txt_anlyz_stats (id text PRIMARY KEY, date text, text_data text, formatted_text text, sentiment text)")
 		
 		//spark
 		val sparkConf = new SparkConf().setAppName("TextAnalyzer").setMaster("local[2]")
@@ -59,8 +60,13 @@ object MasterApp {
 			val rdd = rddRaw.map(_._2)
 			val df = sqlContext.read.schema(schema).json(rdd).filter("id is not null")
 			
+			//add new column to dataframe and add formatted text by removing URLs
+			val url_regx = "^(\\w+):\\/{2}(\\w+)\\.([^\\/]+)([^\\?]+)\\?(.*)"
+			
+			val df_regx = df.withColumn("formatted_text", regexp_replace(df("text_data"), url_regx, ""))
+
 			//add new column to dataframe and retrieve the sentiment using user defined function
-			val df_new = df.withColumn("sentiment", myUDF(df("text_data")))
+			val df_new = df_regx.withColumn("sentiment", myUDF(df_regx("formatted_text")))
 
 			//write dataframe to cassandra
 			df_new.write.format("org.apache.spark.sql.cassandra").options(Map("table" -> "txt_anlyz_stats", "keyspace" -> "textanlyz_space")).save()
