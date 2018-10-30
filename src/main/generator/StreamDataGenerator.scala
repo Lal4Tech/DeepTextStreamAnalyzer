@@ -23,7 +23,7 @@ object StreamDataGenerator {
                   {
                     "id": """+cols(1)+""",
                     "date":""" +cols(2)+""",
-                    "text":""" +cols(5)+"""
+                    "text_data":""" +cols(5)+"""
                   }
                   """
                 val data = new ProducerRecord[String, String](topic, cols(1), jsonString)
