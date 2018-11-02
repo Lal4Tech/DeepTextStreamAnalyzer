@@ -14,6 +14,7 @@ import org.apache.spark.storage.StorageLevel
 
 import org.apache.spark.sql.cassandra._
 import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions.regexp_replace
 import org.apache.spark.sql.{Row, SparkSession, DataFrame, SQLContext}
 import org.apache.spark.sql.types.{DoubleType, StringType, StructField, StructType}
@@ -58,18 +59,19 @@ object MasterApp {
 		//accessing the underlying RDDs of the DStream, convert to dataframe and process
 		messages.foreachRDD(rddRaw => {
 			val rdd = rddRaw.map(_._2)
-			val df = sqlContext.read.schema(schema).json(rdd).filter("id is not null")
+			//val df = sqlContext.read.schema(schema).json(rdd).filter("id is not null")
+			val df = sqlContext.read.schema(schema).json(rdd).filter("id is not null and date is not null and text_data is not null")
 			
 			//add new column to dataframe and add formatted text by removing URLs
 			val url_regx = "^(\\w+):\\/{2}(\\w+)\\.([^\\/]+)([^\\?]+)\\?(.*)"
 			
-			val df_regx = df.withColumn("formatted_text", regexp_replace(df("text_data"), url_regx, ""))
+			val df_regx = df.withColumn("formatted_text", regexp_replace(df("text_data"), url_regx, "")).filter("formatted_text is not null")
 
 			//add new column to dataframe and retrieve the sentiment using user defined function
-			val df_new = df_regx.withColumn("sentiment", myUDF(df_regx("formatted_text")))
+			val df_new = df_regx.withColumn("sentiment", myUDF(df_regx("formatted_text"))).filter("sentiment is not null")
 
 			//write dataframe to cassandra
-			df_new.write.format("org.apache.spark.sql.cassandra").options(Map("table" -> "txt_anlyz_stats", "keyspace" -> "textanlyz_space")).save()
+			df_new.write.format("org.apache.spark.sql.cassandra").options(Map("table" -> "txt_anlyz_stats", "keyspace" -> "textanlyz_space")).mode(SaveMode.Append).save()
 		})
 
 		ssc.start()
