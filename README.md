@@ -34,7 +34,7 @@ For analytics purpose, Python notebook is used. In which basic analysis is shown
 ### Tools
 <ul>
   <li>Big Data: Apache Spark, Cassandra, Kafka</li>
-  <li>Development tools: Scala, Python/li>
+  <li>Development tools: Scala, Python</li>
   <li>Natural Language Processing Algorithms : Stanford NLP</li>
 </ul>
 
